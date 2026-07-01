@@ -74,8 +74,8 @@ async function createServer() {
         }
         
         let hint = "Verifica la configuración de tu Web App.";
-        if (htmlText.includes("Sign in - Google Accounts")) {
-          hint = "Google está pidiendo inicio de sesión. Asegúrate de que en 'Quién tiene acceso' elegiste 'Cualquier persona' (Anyone). Y que la URL termina en /exec, no en /dev.";
+        if (htmlText.includes("Sign in - Google Accounts") || htmlText.includes("accounts.google.com") || htmlText.includes("signin")) {
+          hint = "Google está requiriendo inicio de sesión. Asegúrate de que al configurar la Web App elegiste:\n1. 'Ejecutar como': 'Yo' (Tu cuenta de Google)\n2. 'Quién tiene acceso': 'Cualquiera' (Anyone) (NO 'Cualquiera con cuenta de Google' ni 'Solo yo').\nAdemás, asegúrate de haber autorizado los permisos del script.";
         }
         
         return res.status(502).json({
