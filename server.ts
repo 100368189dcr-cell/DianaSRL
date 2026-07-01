@@ -128,7 +128,7 @@ async function createServer() {
         
         return res.status(502).json({
           success: false,
-          error: `Google Apps Script devolvió HTML. ${hint}`
+          error: `Google Apps Script devolvió HTML. ${hint} HTML Recibido: ${htmlText.substring(0, 150)}...`
         });
       }
 
