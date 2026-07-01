@@ -49,7 +49,8 @@ import { Patient, Appointment, ToothCondition, PaymentRecord, SyncLog, AdminUser
 import clinicLogo from "./assets/images/clinic_favicon_1782900343266.jpg";
 
 const APPS_SCRIPT_CODE = `function doGet(e) {
-  return handleRequest({ action: "read_all" });
+  var spreadsheetUrl = e.parameter.spreadsheetUrl || "https://docs.google.com/spreadsheets/d/1KS9ngWCTTZPfT0Tr8rHBLWz2YVFFH57AHGtx9J_iZio/edit";
+  return handleRequest({ action: "read_all", spreadsheetUrl: spreadsheetUrl });
 }
 
 function doPost(e) {
@@ -58,7 +59,16 @@ function doPost(e) {
 }
 
 function handleRequest(request) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var spreadsheetUrl = request.spreadsheetUrl || "https://docs.google.com/spreadsheets/d/1KS9ngWCTTZPfT0Tr8rHBLWz2YVFFH57AHGtx9J_iZio/edit";
+  var ss;
+  try {
+    ss = SpreadsheetApp.openByUrl(spreadsheetUrl);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      error: "Error al abrir la hoja de cálculo por URL: " + err.message + ". Asegúrate de compartir la hoja de cálculo con permisos de edición." 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
   var action = request.action;
   
   if (action === "read_all" || action === "ping") {
@@ -1072,7 +1082,8 @@ export default function App() {
           payload: {
             action: action,
             timestamp: new Date().toISOString(),
-            data: payloadData
+            data: payloadData,
+            spreadsheetUrl: spreadsheetUrl
           }
         })
       });
@@ -1127,7 +1138,11 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: scriptUrl,
-          payload: { action: "ping", data: { client: "DianaSRL App", status: "checking" } }
+          payload: { 
+            action: "ping", 
+            data: { client: "DianaSRL App", status: "checking" },
+            spreadsheetUrl: spreadsheetUrl
+          }
         })
       });
 
@@ -1206,7 +1221,11 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: scriptUrl,
-          payload: { action: "read_all", data: { client: "DianaSRL App" } }
+          payload: { 
+            action: "read_all", 
+            data: { client: "DianaSRL App" },
+            spreadsheetUrl: spreadsheetUrl
+          }
         })
       });
 
