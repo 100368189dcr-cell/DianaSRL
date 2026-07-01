@@ -53,13 +53,12 @@ async function createServer() {
       // Google Apps Script Web Apps redirect (302) after POST.
       // We need to follow redirects manually because fetch's redirect: "follow"
       // can change POST to GET on redirect, losing the body.
-      // Strategy: POST first, then if we get a redirect, follow it with GET.
       let finalResponse: Response;
 
-      // For ping and read_all, we can use GET directly via the doGet handler
+      // For ping and read_all, use GET directly (doGet always triggers "read_all")
+      // The doGet handler in Apps Script doesn't read URL params, so we just do a plain GET.
       if (payload && (payload.action === "ping" || payload.action === "read_all")) {
-        const getUrl = url + (url.includes("?") ? "&" : "?") + "action=" + payload.action;
-        finalResponse = await fetch(getUrl, {
+        finalResponse = await fetch(url, {
           method: "GET",
           redirect: "follow",
         });
