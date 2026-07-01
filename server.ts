@@ -50,13 +50,91 @@ async function createServer() {
     }
 
     try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      res.json(data);
+      // Google Apps Script Web Apps redirect (302) after POST.
+      // We need to follow redirects manually because fetch's redirect: "follow"
+      // can change POST to GET on redirect, losing the body.
+      // Strategy: POST first, then if we get a redirect, follow it with GET.
+      let finalResponse: Response;
+
+      // For ping and read_all, we can use GET directly via the doGet handler
+      if (payload && (payload.action === "ping" || payload.action === "read_all")) {
+        const getUrl = url + (url.includes("?") ? "&" : "?") + "action=" + payload.action;
+        finalResponse = await fetch(getUrl, {
+          method: "GET",
+          redirect: "follow",
+        });
+      } else {
+        // POST request - follow redirects manually
+        const postResponse = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          redirect: "follow",
+        });
+
+        // If we got a redirect that returned HTML, try to extract the redirect URL
+        const contentType = postResponse.headers.get("content-type") || "";
+        if (contentType.includes("text/html")) {
+          const htmlBody = await postResponse.text();
+          // Google Apps Script sometimes wraps the response in HTML with a meta redirect
+          // or returns the JSON inside a <script> tag
+          const jsonMatch = htmlBody.match(/\{[\s\S]*"success"[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              const extractedJson = JSON.parse(jsonMatch[0]);
+              return res.json(extractedJson);
+            } catch (_) {
+              // Could not parse extracted JSON
+            }
+          }
+          // If we still got HTML, try fetching the URL with GET as a fallback
+          const fallbackResponse = await fetch(url, {
+            method: "GET",
+            redirect: "follow",
+          });
+          const fallbackContentType = fallbackResponse.headers.get("content-type") || "";
+          if (fallbackContentType.includes("application/json") || fallbackContentType.includes("text/plain")) {
+            const fallbackData = await fallbackResponse.json();
+            return res.json(fallbackData);
+          }
+          return res.status(502).json({
+            success: false,
+            error: "Google Apps Script devolvió HTML en lugar de JSON. Verifica que tu Web App esté publicada para 'Cualquiera' (Anyone), que esté autorizada correctamente, y que la URL sea la del deployment más reciente."
+          });
+        }
+
+        finalResponse = postResponse;
+      }
+
+      // Parse the JSON response
+      const responseContentType = finalResponse.headers.get("content-type") || "";
+      if (responseContentType.includes("text/html")) {
+        const htmlText = await finalResponse.text();
+        // Try to extract JSON from HTML wrapper
+        const jsonMatch = htmlText.match(/\{[\s\S]*"success"[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            return res.json(JSON.parse(jsonMatch[0]));
+          } catch (_) {
+            // fall through to error
+          }
+        }
+        return res.status(502).json({
+          success: false,
+          error: "Google Apps Script devolvió HTML en lugar de JSON. Verifica la configuración de tu Web App."
+        });
+      }
+
+      const responseText = await finalResponse.text();
+      try {
+        const data = JSON.parse(responseText);
+        res.json(data);
+      } catch (_) {
+        res.status(502).json({
+          success: false,
+          error: `Respuesta inesperada del servidor de Google: ${responseText.substring(0, 200)}`
+        });
+      }
     } catch (error: any) {
       console.error("Error al reenviar la petición de sincronización:", error);
       res.status(500).json({ success: false, error: error.message });
