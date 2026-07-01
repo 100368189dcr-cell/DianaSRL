@@ -109,6 +109,8 @@ async function createServer() {
       const responseContentType = finalResponse.headers.get("content-type") || "";
       if (responseContentType.includes("text/html")) {
         const htmlText = await finalResponse.text();
+        console.error("RESPUESTA HTML RECIBIDA DE GOOGLE:", htmlText.substring(0, 500) + "...");
+        
         // Try to extract JSON from HTML wrapper
         const jsonMatch = htmlText.match(/\{[\s\S]*"success"[\s\S]*\}/);
         if (jsonMatch) {
@@ -118,9 +120,15 @@ async function createServer() {
             // fall through to error
           }
         }
+        
+        let hint = "Verifica la configuración de tu Web App.";
+        if (htmlText.includes("Sign in - Google Accounts")) {
+          hint = "Google está pidiendo inicio de sesión. Asegúrate de que en 'Quién tiene acceso' elegiste 'Cualquier persona' (Anyone). Y que la URL termina en /exec, no en /dev.";
+        }
+        
         return res.status(502).json({
           success: false,
-          error: "Google Apps Script devolvió HTML en lugar de JSON. Verifica la configuración de tu Web App."
+          error: `Google Apps Script devolvió HTML. ${hint}`
         });
       }
 
