@@ -49,7 +49,7 @@ import { Patient, Appointment, ToothCondition, PaymentRecord, SyncLog, AdminUser
 import clinicLogo from "./assets/images/clinic_favicon_1782900343266.jpg";
 
 const APPS_SCRIPT_CODE = `function doGet(e) {
-  var spreadsheetUrl = e.parameter.spreadsheetUrl || "https://docs.google.com/spreadsheets/d/1KS9ngWCTTZPfT0Tr8rHBLWz2YVFFH57AHGtx9J_iZio/edit";
+  var spreadsheetUrl = (e && e.parameter && e.parameter.spreadsheetUrl) || "https://docs.google.com/spreadsheets/d/1KS9ngWCTTZPfT0Tr8rHBLWz2YVFFH57AHGtx9J_iZio/edit";
   return handleRequest({ action: "read_all", spreadsheetUrl: spreadsheetUrl });
 }
 
