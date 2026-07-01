@@ -1346,7 +1346,9 @@ export default function App() {
         triggerToast(`¡Base de datos cargada! ${importedCount} registros clínicos importados con éxito.`);
       } else {
         newLogEntry.status = "Error";
-        newLogEntry.message = "La Web App de Sheets no retornó un arreglo de datos estructurado. Asegure que su Apps Script soporte 'read_all'.";
+        newLogEntry.message = resJson.error 
+          ? `Error del script de Google: ${resJson.error}`
+          : "La Web App de Sheets no retornó un arreglo de datos estructurado. Asegure que su Apps Script soporte 'read_all'.";
         triggerToast("La Web App no retornó datos válidos.", "error");
       }
     } catch (err: any) {
@@ -1394,7 +1396,8 @@ export default function App() {
         Citas: appointments,
         Pagos: payments,
         Odontogramas: flatOdontograms
-      }
+      },
+      spreadsheetUrl: spreadsheetUrl
     };
 
     try {
