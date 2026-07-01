@@ -59,94 +59,93 @@ function doPost(e) {
 }
 
 function handleRequest(request) {
-  var spreadsheetUrl = request.spreadsheetUrl || "https://docs.google.com/spreadsheets/d/1KS9ngWCTTZPfT0Tr8rHBLWz2YVFFH57AHGtx9J_iZio/edit";
-  var ss;
   try {
-    ss = SpreadsheetApp.openByUrl(spreadsheetUrl);
+    var spreadsheetUrl = request.spreadsheetUrl || "https://docs.google.com/spreadsheets/d/1KS9ngWCTTZPfT0Tr8rHBLWz2YVFFH57AHGtx9J_iZio/edit";
+    var ss = SpreadsheetApp.openByUrl(spreadsheetUrl);
+    var action = request.action;
+    
+    if (action === "read_all" || action === "ping") {
+      if (action === "ping") {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, ping: "pong" })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var data = {
+        patients: getSheetData(ss, "Pacientes"),
+        appointments: getSheetData(ss, "Citas"),
+        payments: getSheetData(ss, "Pagos"),
+        odontograms: getSheetData(ss, "Odontogramas")
+      };
+      return ContentService.createTextOutput(JSON.stringify({ success: true, data: data }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (action === "bulk_write") {
+      var payloadData = request.data || {};
+      var sheetNames = Object.keys(payloadData);
+      
+      for (var s = 0; s < sheetNames.length; s++) {
+        var sName = sheetNames[s];
+        var rowsData = payloadData[sName];
+        if (!Array.isArray(rowsData)) continue;
+        
+        var sheet = ss.getSheetByName(sName);
+        if (!sheet) {
+          sheet = ss.insertSheet(sName);
+        }
+        sheet.clear();
+        if (rowsData.length === 0) continue;
+        
+        var headers = Object.keys(rowsData[0]);
+        sheet.appendRow(headers);
+        
+        for (var r = 0; r < rowsData.length; r++) {
+          var rowObj = rowsData[r];
+          var row = [];
+          for (var h = 0; h < headers.length; h++) {
+            var val = rowObj[headers[h]];
+            row.push(val !== undefined && val !== null ? String(val) : "");
+          }
+          sheet.appendRow(row);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Carga masiva completada con éxito." }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var sheet = ss.getSheetByName(action || "Pacientes");
+    if (!sheet) {
+      sheet = ss.insertSheet(action || "Pacientes");
+    }
+    
+    var payloadData = request.data || {};
+    var headers = sheet.getLastRow() === 0 ? [] : sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var keys = Object.keys(payloadData);
+    
+    if (headers.length === 0) {
+      headers = keys;
+      sheet.appendRow(headers);
+    } else {
+      for (var i = 0; i < keys.length; i++) {
+        if (headers.indexOf(keys[i]) === -1) {
+          headers.push(keys[i]);
+          sheet.getRange(1, headers.length).setValue(keys[i]);
+        }
+      }
+    }
+    
+    var row = [];
+    for (var i = 0; i < headers.length; i++) {
+      row.push(payloadData[headers[i]] !== undefined ? payloadData[headers[i]] : "");
+    }
+    sheet.appendRow(row);
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: true, row: row }))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ 
       success: false, 
-      error: "Error al abrir la hoja de cálculo por URL: " + err.message + ". Asegúrate de compartir la hoja de cálculo con permisos de edición." 
+      error: "Error interno en el script de Google: " + err.message 
     })).setMimeType(ContentService.MimeType.JSON);
   }
-  var action = request.action;
-  
-  if (action === "read_all" || action === "ping") {
-    if (action === "ping") {
-      return ContentService.createTextOutput(JSON.stringify({ success: true, ping: "pong" })).setMimeType(ContentService.MimeType.JSON);
-    }
-    var data = {
-      patients: getSheetData(ss, "Pacientes"),
-      appointments: getSheetData(ss, "Citas"),
-      payments: getSheetData(ss, "Pagos"),
-      odontograms: getSheetData(ss, "Odontogramas")
-    };
-    return ContentService.createTextOutput(JSON.stringify({ success: true, data: data }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  
-  if (action === "bulk_write") {
-    var payloadData = request.data || {};
-    var sheetNames = Object.keys(payloadData);
-    
-    for (var s = 0; s < sheetNames.length; s++) {
-      var sName = sheetNames[s];
-      var rowsData = payloadData[sName];
-      if (!Array.isArray(rowsData)) continue;
-      
-      var sheet = ss.getSheetByName(sName);
-      if (!sheet) {
-        sheet = ss.insertSheet(sName);
-      }
-      sheet.clear();
-      if (rowsData.length === 0) continue;
-      
-      var headers = Object.keys(rowsData[0]);
-      sheet.appendRow(headers);
-      
-      for (var r = 0; r < rowsData.length; r++) {
-        var rowObj = rowsData[r];
-        var row = [];
-        for (var h = 0; h < headers.length; h++) {
-          var val = rowObj[headers[h]];
-          row.push(val !== undefined && val !== null ? String(val) : "");
-        }
-        sheet.appendRow(row);
-      }
-    }
-    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Carga masiva completada con éxito." }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  
-  var sheet = ss.getSheetByName(action || "Pacientes");
-  if (!sheet) {
-    sheet = ss.insertSheet(action || "Pacientes");
-  }
-  
-  var payloadData = request.data || {};
-  var headers = sheet.getLastRow() === 0 ? [] : sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var keys = Object.keys(payloadData);
-  
-  if (headers.length === 0) {
-    headers = keys;
-    sheet.appendRow(headers);
-  } else {
-    for (var i = 0; i < keys.length; i++) {
-      if (headers.indexOf(keys[i]) === -1) {
-        headers.push(keys[i]);
-        sheet.getRange(1, headers.length).setValue(keys[i]);
-      }
-    }
-  }
-  
-  var row = [];
-  for (var i = 0; i < headers.length; i++) {
-    row.push(payloadData[headers[i]] !== undefined ? payloadData[headers[i]] : "");
-  }
-  sheet.appendRow(row);
-  
-  return ContentService.createTextOutput(JSON.stringify({ success: true, row: row }))
-    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function getSheetData(ss, name) {
