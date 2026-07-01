@@ -540,9 +540,12 @@ export default function App() {
   const [lang, setLang] = useState<"en" | "es" | "fr" | "pt">("es");
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  // Google Sheets Apps Script Sync configuration
   const [scriptUrl, setScriptUrl] = useState<string>(() => {
-    return localStorage.getItem("dianasrl_script_url") || "https://script.google.com/macros/s/AKfycbwZYD4fiYPh0p2ItyKcBo83Fj1snhj8lD_hVtXB3rOzlPrQDd6R-LVNnsB7gXtMu-Pq/exec";
+    const saved = localStorage.getItem("dianasrl_script_url");
+    if (!saved || saved.includes("AKfycbwZYD4fiYPh")) {
+      return "https://script.google.com/macros/s/AKfycbyDnTDgcn54bJ9koOhwHMfUeVpq0uj9FmBkdExneZy6jUSCdgV3vNDzTyoMwwHSWz3yyg/exec";
+    }
+    return saved;
   });
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string>(() => {
     return localStorage.getItem("dianasrl_spreadsheet_url") || "https://docs.google.com/spreadsheets/d/1KS9ngWCTTZPfT0Tr8rHBLWz2YVFFH57AHGtx9J_iZio/edit?gid=1256709280#gid=1256709280";
