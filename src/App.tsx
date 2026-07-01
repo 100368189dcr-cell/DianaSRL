@@ -552,8 +552,8 @@ export default function App() {
   const [scriptUrl, setScriptUrl] = useState<string>(() => {
     const saved = localStorage.getItem("dianasrl_script_url");
     // Upgrade if no saved URL, or if it is one of the old broken URLs
-    if (!saved || saved.includes("AKfycbwZYD4fiYPh") || saved.includes("AKfycbyDnTDgcn54bJ")) {
-      return "https://script.google.com/macros/s/AKfycbzs-IcR080wdJUFySLm_MHSKc4DdVVNNzy0lR9zfeJJhZGvLS7A22FNLHd6bJR-Wnge/exec";
+    if (!saved || saved.includes("AKfycbwZYD4fiYPh") || saved.includes("AKfycbyDnTDgcn54bJ") || saved.includes("AKfycbzs-IcR08")) {
+      return "https://script.google.com/macros/s/AKfycbwg57wHj8LVeyJsWiid9K5oym_XneMg58EOKGzQ1zIWspn_-C95Viw2NP_81oD1B5q0/exec";
     }
     return saved;
   });
